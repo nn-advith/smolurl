@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var GlobalLogger *Logger
+
 type Logger struct {
 	filelog     bool
 	stdlog      bool
@@ -18,7 +20,7 @@ type Logger struct {
 	logger      *log.Logger
 }
 
-func InitLogger(enableStd bool, enableFile bool) (*Logger, error) {
+func InitLogger(enableStd bool, enableFile bool) error {
 
 	var writers []io.Writer
 
@@ -28,18 +30,18 @@ func InitLogger(enableStd bool, enableFile bool) (*Logger, error) {
 		//directory not present; create
 		err := os.MkdirAll(DATADIR, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create data directory")
+			return fmt.Errorf("unable to create data directory")
 		}
 	} else if err != nil {
-		return nil, fmt.Errorf("error during logger init - %v", err)
+		return fmt.Errorf("error during logger init - %v", err)
 	} else if !f.IsDir() {
-		return nil, fmt.Errorf("%v is not a directory", DATADIR)
+		return fmt.Errorf("%v is not a directory", DATADIR)
 	}
 	var logfilepath string
 	//create logs directory
 	err := os.MkdirAll(filepath.Join(DATADIR, "logs"), 0644)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create logs directory")
+		return fmt.Errorf("unable to create logs directory")
 	}
 	if enableFile {
 		logfilepath = filepath.Join(DATADIR, "logs/log-"+strings.Split(time.Now().Format(time.RFC3339), "T")[0]+".log")
@@ -54,7 +56,7 @@ func InitLogger(enableStd bool, enableFile bool) (*Logger, error) {
 	if enableFile {
 		file, err := os.OpenFile(newlogger.logfilepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("error creating log file - %v", err)
+			return fmt.Errorf("error creating log file - %v", err)
 		}
 		newlogger.logfile = file
 		writers = append(writers, file)
@@ -66,8 +68,8 @@ func InitLogger(enableStd bool, enableFile bool) (*Logger, error) {
 
 	multi := io.MultiWriter(writers...)
 	newlogger.logger = log.New(multi, "", log.LstdFlags|log.Lshortfile)
-
-	return newlogger, nil
+	GlobalLogger = newlogger
+	return nil
 }
 
 func (l *Logger) Close() { //must be deferred. file descriptor is kept open for performance

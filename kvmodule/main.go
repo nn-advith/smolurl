@@ -8,10 +8,12 @@ import (
 )
 
 type DBInf interface {
-	Connect() error
+	Connect(collection string) error
+	Disconnect() error
+	Insert(collection string, data any) error
 }
 
-func InitialiseDB(dbtype string) {
+func InitialiseDB(dbtype string, collection string) DBInf {
 	logger.GlobalLogger.Info("Initialising DB connection")
 	var dbInstance DBInf
 
@@ -23,14 +25,14 @@ func InitialiseDB(dbtype string) {
 			Password:         "cbuser",
 			Bucketname:       "Ororo",
 		}
-		err := dbInstance.Connect()
+		err := dbInstance.Connect(collection)
 		if err != nil {
 			logger.GlobalLogger.Fatal(fmt.Sprintf("unable to connect to couchbase: %v", err))
-			return
+			return nil
 		}
 	default:
 		logger.GlobalLogger.Fatal("dbtype not recognised")
 	}
 
-	fmt.Println(dbInstance)
+	return dbInstance
 }

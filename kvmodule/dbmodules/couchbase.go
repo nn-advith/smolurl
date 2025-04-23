@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/couchbase/gocb/v2"
+	"github.com/nn-advith/smolurl/kvmodule/datamodel"
 	"github.com/nn-advith/smolurl/logger"
 )
 
@@ -17,8 +18,8 @@ type CBConnector struct {
 	Bucket           *gocb.Bucket
 }
 
-func (c *CBConnector) Connect() error {
-	logger.GlobalLogger.Info("Connecting to cluster and initialising bucket...")
+func (c *CBConnector) Connect(collection string) error {
+	logger.GlobalLogger.Info("CB: Connecting to cluster and initialising bucket...")
 	cluster, err := gocb.Connect("couchbase://"+c.ConnectionString, gocb.ClusterOptions{
 		Authenticator: gocb.PasswordAuthenticator{
 			Username: c.Username,
@@ -36,7 +37,62 @@ func (c *CBConnector) Connect() error {
 	if err != nil {
 		return fmt.Errorf("bucket connection failed: %v", err)
 	}
-	logger.GlobalLogger.Info("Cluster connected and bucket initialised")
+
+	// check for existance of collection
+
+	cMgr := c.Bucket.CollectionsV2()
+	scopes, err := cMgr.GetAllScopes(nil)
+
+	if err != nil {
+		return fmt.Errorf("unable to get all scopes for bucket: %v", err)
+	}
+
+	exists := false
+	for _, s := range scopes {
+		if s.Name == "_default" {
+			for _, c := range s.Collections {
+				if c.Name == collection {
+					exists = true
+					break
+				}
+			}
+		}
+	}
+	if !exists {
+		//create collection under default scope
+		// err := cMgr.CreateCollection("_default", collection, nil, nil)
+		// if err != nil {
+		// 	return fmt.Errorf("unable to create collection; pls verify couchbase : %v", err)
+		// }
+		// logger.GlobalLogger.Info("CB: Couchbase collection ", collection, " created")
+
+		return fmt.Errorf("required collection is not present, please contact admin to create collection")
+	}
+	logger.GlobalLogger.Info("CB: Collection found.")
+	logger.GlobalLogger.Info("CB: Cluster connected and bucket initialised")
 	return nil
 
+}
+
+func (c *CBConnector) Disconnect() error {
+	if err := c.Cluster.Close(nil); err != nil {
+		return fmt.Errorf("error during disconnect: %v", err)
+	} else {
+		logger.GlobalLogger.Info("CB: disconnected from couchbase")
+	}
+	return nil
+}
+
+func (c *CBConnector) Insert(collection string, data any) error {
+	logger.GlobalLogger.Info("CB: Inserting document")
+	col := c.Bucket.DefaultScope().Collection(collection)
+	if e, ok := data.(datamodel.UrlEntry); ok {
+		_, err := col.Upsert(e.ID, data, nil)
+		if err != nil {
+			return fmt.Errorf("error during upsert: %v", err)
+		}
+	} else {
+		return fmt.Errorf("data is not of type UrlEntry")
+	}
+	return nil
 }

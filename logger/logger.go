@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -25,10 +26,19 @@ func InitLogger(enableStd bool, enableFile bool) error {
 	var writers []io.Writer
 
 	//log file name gen and directory checks
-	DATADIR := filepath.Join(os.Getenv("APPDATA"), "smolurl")
+	var DATADIR string
+	if runtime.GOOS == "windows" {
+		DATADIR = filepath.Join(os.Getenv("APPDATA"), "smolurl")
+	} else {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("could not get user home directory: %v", err)
+		}
+		DATADIR = filepath.Join(home, ".config", "smolurl")
+	}
 	if f, err := os.Stat(DATADIR); os.IsNotExist(err) {
 		//directory not present; create
-		err := os.MkdirAll(DATADIR, 0644)
+		err := os.MkdirAll(DATADIR, 0755)
 		if err != nil {
 			return fmt.Errorf("unable to create data directory")
 		}
@@ -39,7 +49,8 @@ func InitLogger(enableStd bool, enableFile bool) error {
 	}
 	var logfilepath string
 	//create logs directory
-	err := os.MkdirAll(filepath.Join(DATADIR, "logs"), 0644)
+	fmt.Println(DATADIR)
+	err := os.MkdirAll(filepath.Join(DATADIR, "logs"), 0755)
 	if err != nil {
 		return fmt.Errorf("unable to create logs directory")
 	}

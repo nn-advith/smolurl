@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/nn-advith/smolurl/appmodule"
 	"github.com/nn-advith/smolurl/kvmodule"
-	"github.com/nn-advith/smolurl/kvmodule/datamodel"
 	logger "github.com/nn-advith/smolurl/logger"
 )
 
@@ -38,15 +38,29 @@ func main() {
 
 	alog.Info("Trying insert")
 
-	var newhash datamodel.UrlEntry = datamodel.UrlEntry{
-		ID:      "SOMEHASH",
-		LongURL: "https://nnadvith.netlify.app",
-		Created: 45545435,
-		TTL:     60000,
-	}
+	// var newhash datamodel.UrlEntry = datamodel.UrlEntry{
+	// 	ID:      "SOMEHASH",
+	// 	LongURL: "https://nnadvith.netlify.app",
+	// 	Created: 45545435,
+	// 	TTL:     60000,
+	// }
 
-	err = dbinstance.Insert(COLLECTION, newhash)
+	// err = dbinstance.Insert(COLLECTION, newhash)
+	// if err != nil {
+	// 	logger.GlobalLogger.Error("MAIN: error during insert: ", err)
+	// }
+
+	// newhash.Created = 0000000
+
+	// err = dbinstance.Update(COLLECTION, newhash)
+	// if err != nil {
+	// 	logger.GlobalLogger.Error("MAIN: error during update: ", err)
+	// }
+	data, err := dbinstance.Read(COLLECTION, "SOMEHASH")
 	if err != nil {
-		logger.GlobalLogger.Error("MAIN: error during insert: ", err)
+		logger.GlobalLogger.Error("MAIN: error during Read: ", err)
 	}
+	alog.Info(data)
+
+	appmodule.ConfigureAppModule(dbinstance)
 }

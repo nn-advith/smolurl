@@ -27,7 +27,8 @@ func generateRoutes(db kvmodule.DBInf) http.Handler {
 		fmt.Fprintln(w, data)
 	})
 
-	return middleware.InjectDB(db)(mux)
+	newMux := middleware.NewDBMiddleware(mux, db)
+	return newMux
 
 }
 
@@ -62,5 +63,5 @@ func ConfigureAppModule(dbinstance kvmodule.DBInf) {
 		fmt.Println("Shutdown error:", err)
 	}
 
-	fmt.Println("Server gracefully stopped")
+	logger.GlobalLogger.Info("Server gracefully stopped")
 }

@@ -11,6 +11,8 @@ type DBInf interface {
 	Connect(collection string) error
 	Disconnect() error
 	Insert(collection string, data any) error
+	Update(collection string, data any) error
+	Read(collection string, id string) (any, error)
 }
 
 func InitialiseDB(dbtype string, collection string) DBInf {

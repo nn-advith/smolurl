@@ -86,13 +86,41 @@ func (c *CBConnector) Disconnect() error {
 func (c *CBConnector) Insert(collection string, data any) error {
 	logger.GlobalLogger.Info("CB: Inserting document")
 	col := c.Bucket.DefaultScope().Collection(collection)
-	if e, ok := data.(datamodel.UrlEntry); ok {
-		_, err := col.Upsert(e.ID, data, nil)
+	if e, ok := data.(datamodel.UrlEntry); ok { //type-assertion - move to generics
+		_, err := col.Insert(e.ID, data, nil)
 		if err != nil {
-			return fmt.Errorf("error during upsert: %v", err)
+			return fmt.Errorf("error during insert: %v", err)
 		}
 	} else {
 		return fmt.Errorf("data is not of type UrlEntry")
 	}
 	return nil
+}
+
+func (c *CBConnector) Update(collection string, data any) error {
+	logger.GlobalLogger.Info("CB: Updating document")
+	col := c.Bucket.DefaultScope().Collection(collection)
+	if e, ok := data.(datamodel.UrlEntry); ok {
+		_, err := col.Replace(e.ID, data, nil)
+		if err != nil {
+			return fmt.Errorf("error during update: %v", err)
+		}
+	} else {
+		return fmt.Errorf("data is not of type UrlEntry")
+	}
+	return nil
+}
+
+func (c *CBConnector) Read(collection string, id string) (any, error) {
+	logger.GlobalLogger.Info("CB: Retreiving document with ID ", id)
+	col := c.Bucket.DefaultScope().Collection(collection)
+	doc, err := col.Get(id, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error during retreival: %v", err)
+	}
+	var urlentry datamodel.UrlEntry
+	if err := doc.Content(&urlentry); err != nil {
+		return nil, fmt.Errorf("unable to decode: %v", err)
+	}
+	return urlentry, nil
 }

@@ -1,6 +1,7 @@
 package dbmodules
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -116,6 +117,9 @@ func (c *CBConnector) Read(collection string, id string) (any, error) {
 	col := c.Bucket.DefaultScope().Collection(collection)
 	doc, err := col.Get(id, nil)
 	if err != nil {
+		if errors.Is(err, gocb.ErrDocumentNotFound) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("error during retreival: %v", err)
 	}
 	var urlentry datamodel.UrlEntry

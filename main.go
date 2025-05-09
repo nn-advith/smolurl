@@ -20,7 +20,7 @@ func main() {
 	COLLECTION := "smolurl"
 
 	//initialise logger with both stdout and logfile
-	err := logger.InitLogger(true, true)
+	err := logger.InitLogger(true, false)
 	alog := logger.GlobalLogger
 	if err != nil {
 		fmt.Printf("initlogger error - %v ", err)
@@ -56,11 +56,11 @@ func main() {
 	// if err != nil {
 	// 	logger.GlobalLogger.Error("MAIN: error during update: ", err)
 	// }
-	data, err := dbinstance.Read(COLLECTION, "SOMEHASH")
-	if err != nil {
-		logger.GlobalLogger.Error("MAIN: error during Read: ", err)
-	}
-	alog.Info(data)
+	// data, err := dbinstance.Read(COLLECTION, "SOMEHASH")
+	// if err != nil {
+	// 	logger.GlobalLogger.Error("MAIN: error during Read: ", err)
+	// }
+	// alog.Info(data)
 
-	appmodule.ConfigureAppModule(dbinstance)
+	appmodule.ConfigureAppModule(dbinstance, COLLECTION)
 }

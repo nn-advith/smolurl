@@ -2,6 +2,7 @@ package appmodule
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,20 +12,95 @@ import (
 
 	"github.com/nn-advith/smolurl/appmodule/middleware"
 	"github.com/nn-advith/smolurl/appmodule/server"
+	"github.com/nn-advith/smolurl/hashmodule"
 	"github.com/nn-advith/smolurl/kvmodule"
+	"github.com/nn-advith/smolurl/kvmodule/datamodel"
 	"github.com/nn-advith/smolurl/logger"
 )
 
+type Rbody struct {
+	Url string `json:"url"`
+}
+
+var COLLECTION string
+
 func generateRoutes(db kvmodule.DBInf) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		dbinstance := middleware.GetDBContext(req.Context())
-		data, err := dbinstance.Read("smolurl", "SOMEHASH")
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("standard"))
+	})
+
+	mux.HandleFunc("POST /hash/", func(w http.ResponseWriter, r *http.Request) {
+		dbinstance := middleware.GetDBContext(r.Context())
+		var rbody Rbody
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		err := decoder.Decode(&rbody)
 		if err != nil {
-			logger.GlobalLogger.Error("MAIN: error during Read: ", err)
+			logger.GlobalLogger.Error("unable to decode request body; dropping")
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
-		fmt.Fprintln(w, data)
+		//pass the url to hash module and generate a hash
+		//query the database for hash collisions; if yes, retrigger hash generation; else add to db with related fields
+		//respond with hash url as plain text
+		attempts := 1
+		slug := hashmodule.GenerateHash(rbody.Url, attempts)
+		for {
+			urlentry, err := dbinstance.Read(COLLECTION, slug)
+			if err != nil {
+				logger.GlobalLogger.Error("smallgen error: database read: ", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if urlentry == nil {
+				break
+			}
+
+			urlasserted := urlentry.(datamodel.UrlEntry)
+			if urlasserted.LongURL == rbody.Url {
+				//exists
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(fmt.Sprintf("http://localhost:4000/%v\n", slug)))
+				return
+			} else {
+				attempts++
+				slug = hashmodule.GenerateHash(rbody.Url, attempts)
+			}
+		}
+		//slug is ready and no collisions
+		//add to db
+		var newUrlEntry datamodel.UrlEntry
+		newUrlEntry.Created = time.Now().Unix()
+		newUrlEntry.ID = slug
+		newUrlEntry.TTL = 30000
+		newUrlEntry.LongURL = rbody.Url
+
+		err = dbinstance.Insert(COLLECTION, newUrlEntry)
+		if err != nil {
+			logger.GlobalLogger.Error("smolgen error: database insert", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		w.Write([]byte(fmt.Sprintf("http://localhost:4000/%v\n", slug)))
+
+	})
+
+	mux.HandleFunc("GET /{somehash}", func(w http.ResponseWriter, r *http.Request) {
+		dbinstance := middleware.GetDBContext(r.Context())
+		hashval := r.PathValue("somehash")
+		urlenty, err := dbinstance.Read(COLLECTION, hashval)
+		if err != nil {
+			logger.GlobalLogger.Error("queryhash error: ", err)
+		}
+		if urlenty == nil {
+			//noentry
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			urlasserted := urlenty.(datamodel.UrlEntry)
+			http.Redirect(w, r, urlasserted.LongURL, http.StatusMovedPermanently)
+		}
+
 	})
 
 	newMux := middleware.NewDBMiddleware(mux, db)
@@ -32,8 +108,8 @@ func generateRoutes(db kvmodule.DBInf) http.Handler {
 
 }
 
-func ConfigureAppModule(dbinstance kvmodule.DBInf) {
-
+func ConfigureAppModule(dbinstance kvmodule.DBInf, collection string) {
+	COLLECTION = collection
 	cfg := server.Config{
 		Address:      ":4000",
 		ReadTimeout:  5 * time.Second,

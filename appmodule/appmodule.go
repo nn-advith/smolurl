@@ -104,7 +104,7 @@ func generateRoutes(db kvmodule.DBInf) http.Handler {
 				if err != nil {
 					logger.GlobalLogger.Error("queryhash error: ", err)
 				}
-				w.WriteHeader(http.StatusNotFound)
+				w.WriteHeader(http.StatusGone)
 				return
 			}
 			http.Redirect(w, r, urlasserted.LongURL, http.StatusMovedPermanently)

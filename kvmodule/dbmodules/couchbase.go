@@ -128,3 +128,13 @@ func (c *CBConnector) Read(collection string, id string) (any, error) {
 	}
 	return urlentry, nil
 }
+
+func (c *CBConnector) Delete(collection string, id string) error {
+	logger.GlobalLogger.Info("CB: Deleting document with ID ", id)
+	col := c.Bucket.DefaultScope().Collection(collection)
+	_, err := col.Remove(id, nil)
+	if err != nil {
+		return fmt.Errorf("error during deletion: %v", err)
+	}
+	return nil
+}

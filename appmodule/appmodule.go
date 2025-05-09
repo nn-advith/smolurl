@@ -74,7 +74,7 @@ func generateRoutes(db kvmodule.DBInf) http.Handler {
 		var newUrlEntry datamodel.UrlEntry
 		newUrlEntry.Created = time.Now().Unix()
 		newUrlEntry.ID = slug
-		newUrlEntry.TTL = 30000
+		newUrlEntry.TTL = 60
 		newUrlEntry.LongURL = rbody.Url
 
 		err = dbinstance.Insert(COLLECTION, newUrlEntry)
@@ -98,6 +98,15 @@ func generateRoutes(db kvmodule.DBInf) http.Handler {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
 			urlasserted := urlenty.(datamodel.UrlEntry)
+			if time.Now().Unix() > (urlasserted.Created + int64(urlasserted.TTL)) {
+				//delete entry
+				err := dbinstance.Delete(COLLECTION, urlasserted.ID)
+				if err != nil {
+					logger.GlobalLogger.Error("queryhash error: ", err)
+				}
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 			http.Redirect(w, r, urlasserted.LongURL, http.StatusMovedPermanently)
 		}
 

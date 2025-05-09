@@ -13,6 +13,7 @@ type DBInf interface {
 	Insert(collection string, data any) error
 	Update(collection string, data any) error
 	Read(collection string, id string) (any, error)
+	Delete(collection string, id string) error
 }
 
 func InitialiseDB(dbtype string, collection string) DBInf {

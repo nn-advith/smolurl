@@ -74,7 +74,7 @@ func generateRoutes(db kvmodule.DBInf) http.Handler {
 		var newUrlEntry datamodel.UrlEntry
 		newUrlEntry.Created = time.Now().Unix()
 		newUrlEntry.ID = slug
-		newUrlEntry.TTL = 60
+		newUrlEntry.TTL = 604800
 		newUrlEntry.LongURL = rbody.Url
 
 		err = dbinstance.Insert(COLLECTION, newUrlEntry)

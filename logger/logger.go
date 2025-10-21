@@ -1,3 +1,4 @@
+// Package logger handles the global logger and it's related functions.
 package logger
 
 import (
@@ -11,16 +12,19 @@ import (
 	"time"
 )
 
+// Singular, global instance of type [logger.Logger], usable from every module.
 var GlobalLogger *Logger
 
+// A Logger writes logs to stdout and/or configured log files, at varying log levels. Wrapped over [log.Logger]
 type Logger struct {
 	filelog     bool
 	stdlog      bool
-	logfilepath string // no control on this. will be auto-generated based on date
+	logfilepath string
 	logfile     *os.File
 	logger      *log.Logger
 }
 
+// InitLogger initialises the global logger [logger.GlobalLogger] with a combination of terminal and file logs. The required files/directories are created and a new instance of [logger.Logger] is initialised.
 func InitLogger(enableStd bool, enableFile bool) error {
 
 	var writers []io.Writer
@@ -83,20 +87,24 @@ func InitLogger(enableStd bool, enableFile bool) error {
 	return nil
 }
 
+// Close closes the logfile that is used for file logging. Must be closed manually in cleanup or atleast deferred post initialisation.
 func (l *Logger) Close() { //must be deferred. file descriptor is kept open for performance
 	if l.filelog && l.logfile != nil {
 		l.logfile.Close()
 	}
 }
 
+// Info logs messages at info log level.
 func (l *Logger) Info(msg ...any) {
 	l.logger.Println(append([]any{"[INFO]:"}, msg...)...)
 }
 
+// Error logs messages at error log level.
 func (l *Logger) Error(msg ...any) {
 	l.logger.Println(append([]any{"[ERROR]:"}, msg...)...)
 }
 
+// Fatal logs messages at fatal log level and exits.
 func (l *Logger) Fatal(msg ...any) {
 	l.logger.Fatalln(append([]any{"[FATAL]:"}, msg...)...)
 }

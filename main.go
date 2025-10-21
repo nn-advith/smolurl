@@ -1,3 +1,5 @@
+// Package main is the starting point of the smolurl application. Smolurl is a url shortner application that compresses a long url into a shorturl that is redirectable. like Tinyurl.
+// The application runs as a http server and uses a non relational database such as couchbase for data persistance. Additional databases can be configured.
 package main
 
 import (
@@ -8,6 +10,8 @@ import (
 	logger "github.com/nn-advith/smolurl/logger"
 )
 
+// main function is the starting function that performs initialization tasks and listens for requests.
+// As part of initialization, global logger and database connection are configured. The application module is then initialized.
 func main() {
 
 	// initialise logger

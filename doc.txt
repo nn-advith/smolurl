@@ -1,0 +1,203 @@
+=========== github.com/nn-advith/smolurl ===========
+Package main is the starting point of the smolurl application. Smolurl is a
+url shortner application that compresses a long url into a shorturl that is
+redirectable. like Tinyurl. The application runs as a http server and uses a non
+relational database such as couchbase for data persistance. Additional databases
+can be configured.
+
+FUNCTIONS
+
+func main()
+    main function is the starting function that performs initialization
+    tasks and listens for requests. As part of initialization, global logger
+    and database connection are configured. The application module is then
+    initialized.
+
+ 
+ 
+=========== github.com/nn-advith/smolurl/appmodule ===========
+package appmodule // import "github.com/nn-advith/smolurl/appmodule"
+
+
+VARIABLES
+
+var COLLECTION string
+
+FUNCTIONS
+
+func ConfigureAppModule(dbinstance kvmodule.DBInf, collection string)
+func generateRoutes(db kvmodule.DBInf) http.Handler
+
+TYPES
+
+type Rbody struct {
+	Url string `json:"url"`
+}
+
+ 
+ 
+=========== github.com/nn-advith/smolurl/appmodule/middleware ===========
+package middleware // import "github.com/nn-advith/smolurl/appmodule/middleware"
+
+
+FUNCTIONS
+
+func GetDBContext(ctx context.Context) kvmodule.DBInf
+
+TYPES
+
+type DBMiddleware struct {
+	handler http.Handler
+	db      kvmodule.DBInf
+}
+
+func NewDBMiddleware(handlerToWrap http.Handler, db kvmodule.DBInf) *DBMiddleware
+
+func (dm *DBMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request)
+
+type contextKey string
+
+const DBKey contextKey = "db"
+ 
+ 
+=========== github.com/nn-advith/smolurl/appmodule/server ===========
+package server // import "github.com/nn-advith/smolurl/appmodule/server"
+
+
+TYPES
+
+type AppServer struct {
+	Server     http.Server
+	DBInstance *kvmodule.DBInf
+}
+
+func NewServer(cfg Config, dbInstance kvmodule.DBInf, handler http.Handler) (*AppServer, error)
+
+func (a *AppServer) Start() error
+
+func (a *AppServer) Stop(ctx context.Context) error
+
+type Config struct {
+	Address      string
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+	IdleTimeout  time.Duration
+}
+
+ 
+ 
+=========== github.com/nn-advith/smolurl/hashmodule ===========
+package hashmodule // import "github.com/nn-advith/smolurl/hashmodule"
+
+
+FUNCTIONS
+
+func GenerateHash(url string, attempts int) string
+ 
+ 
+=========== github.com/nn-advith/smolurl/kvmodule ===========
+package kvmodule // import "github.com/nn-advith/smolurl/kvmodule"
+
+
+TYPES
+
+type DBInf interface {
+	Connect(collection string) error
+	Disconnect() error
+	Insert(collection string, data any) error
+	Update(collection string, data any) error
+	Read(collection string, id string) (any, error)
+	Delete(collection string, id string) error
+}
+
+func InitialiseDB(dbtype string, collection string) DBInf
+
+ 
+ 
+=========== github.com/nn-advith/smolurl/kvmodule/datamodel ===========
+package datamodel // import "github.com/nn-advith/smolurl/kvmodule/datamodel"
+
+
+TYPES
+
+type UrlEntry struct {
+	ID      string `bson:"_id" json:"_id"`
+	LongURL string `bson:"longurl" json:"longurl"`
+	Created int64  `bson:"created" json:"created"`
+	TTL     int    `bson:"ttl" json:"ttl"`
+}
+
+ 
+ 
+=========== github.com/nn-advith/smolurl/kvmodule/dbmodules ===========
+package dbmodules // import "github.com/nn-advith/smolurl/kvmodule/dbmodules"
+
+
+TYPES
+
+type CBConnector struct {
+	ConnectionString string
+	Username         string
+	Password         string
+	Bucketname       string
+	Cluster          *gocb.Cluster
+	Bucket           *gocb.Bucket
+}
+
+func (c *CBConnector) Connect(collection string) error
+
+func (c *CBConnector) Delete(collection string, id string) error
+
+func (c *CBConnector) Disconnect() error
+
+func (c *CBConnector) Insert(collection string, data any) error
+
+func (c *CBConnector) Read(collection string, id string) (any, error)
+
+func (c *CBConnector) Update(collection string, data any) error
+
+ 
+ 
+=========== github.com/nn-advith/smolurl/logger ===========
+package logger // import "github.com/nn-advith/smolurl/logger"
+
+Package logger handles the global logger and it's related functions.
+
+FUNCTIONS
+
+func InitLogger(enableStd bool, enableFile bool) error
+    InitLogger initialises the global logger logger.GlobalLogger with a
+    combination of terminal and file logs. The required files/directories are
+    created and a new instance of logger.Logger is initialised.
+
+
+TYPES
+
+type Logger struct {
+	filelog     bool
+	stdlog      bool
+	logfilepath string
+	logfile     *os.File
+	logger      *log.Logger
+}
+    A Logger writes logs to stdout and/or configured log files, at varying log
+    levels. Wrapped over log.Logger
+
+var GlobalLogger *Logger
+    Singular, global instance of type logger.Logger, usable from every module.
+
+func (l *Logger) Close()
+    Close closes the logfile that is used for file logging. Must be closed
+    manually in cleanup or atleast deferred post initialisation.
+
+func (l *Logger) Error(msg ...any)
+    Error logs messages at error log level.
+
+func (l *Logger) Fatal(msg ...any)
+    Fatal logs messages at fatal log level and exits.
+
+func (l *Logger) Info(msg ...any)
+    Info logs messages at info log level.
+
+ 
+ 
